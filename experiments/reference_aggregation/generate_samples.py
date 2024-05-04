@@ -24,7 +24,7 @@ def main(testset: str, language_pair: str, seed_no: int, num_samples: int, epsil
 
     with jsonlines.open(out_path, "w") as f:
         for source_sentence in tqdm(dataset.source_sentences):
-            f.write({"samples": model.sample(num_samples * [source_sentence], seed=seed), })
+            f.write({"samples": model.sample(num_samples * [source_sentence], seed=seed, epsilon_cutoff=epsilon_cutoff), })
 
     return out_path
 
