@@ -34,7 +34,6 @@ class TranslationModel:
         return translations
 
     def sample(self, sentences: List[str], seed=None, **kwargs) -> List[str]:
-        # TODO - Add epsilon prunning to the sampling pipeline.
         outputs = self.pipeline(
             sentences,
             src_lang=self.tokenizer.src_lang,
