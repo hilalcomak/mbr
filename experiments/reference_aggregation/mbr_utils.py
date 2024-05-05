@@ -158,10 +158,13 @@ class CometUtility:
     def rank_samples_aggregate(self, source_sequence: str, samples: List[str], references: List[str], s: int) -> np.ndarray:
         """
         Returns the indices of the samples sorted by their utility score, in descending order.
-        :param s: The number of aggregate referencesq
+        :param s: The number of aggregate references.
         """
         assert s <= len(references)
         assert not self.scorer.training
+        print(f"Source:{source_sequence}")
+        print(f"Samples:{samples}")
+        print(f"References:{references}")
 
         num_partitions = s
         partition_size = len(references) // num_partitions
@@ -185,6 +188,7 @@ class CometUtility:
                                         range(self.batch_size_estimate, len(input_triples), self.batch_size_estimate))
         for start_idx, end_idx in batches:
             batch = input_triples[start_idx:end_idx]
+            # Weights should go around here!
             batch_scores = self.scorer.estimate(
                 src_sentemb=torch.stack([self.embeddings[input.src] for input in batch]),
                 mt_sentemb=torch.stack([self.embeddings[input.hyp] for input in batch]),
