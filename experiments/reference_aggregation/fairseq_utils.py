@@ -40,7 +40,7 @@ class TranslationModel:
             sentences,
             src_lang=self.tokenizer.src_lang,
             tgt_lang=self.tokenizer.tgt_lang,
-            do_sample=1,
+            do_sample=True,
             **kwargs,
         )
         translations = [output['translation_text'] for output in outputs]
