@@ -8,7 +8,7 @@ from experiments.reference_aggregation.experiment_utils import SEEDS, Testset
 from experiments.reference_aggregation.fairseq_utils import load_model
 
 
-def main(testset: str, language_pair: str, seed_no: int, num_samples: int, epsilon_cutoff: float, model: str, subsample_probabilities_model: str, num_subsamples:int,
+def main(testset: str, language_pair: str, seed_no: int, num_samples: int, epsilon_cutoff: float, model_name: str, subsample_probabilities_model: str, num_subsamples:int,
          limit_segments: int = None, out_dir: Path = None) -> Path:
     if out_dir is None:
         out_dir = Path(__file__).parent
@@ -16,7 +16,7 @@ def main(testset: str, language_pair: str, seed_no: int, num_samples: int, epsil
     seed = SEEDS[seed_no]
     dataset = Testset.from_wmt(testset, language_pair, limit_segments=limit_segments)
 
-    model = load_model(language_pair, model, subsample_probabilities_model, num_subsamples)
+    model = load_model(language_pair, model_name, subsample_probabilities_model, num_subsamples)
 
     samples_dir = out_dir / "samples"
     samples_dir.mkdir(exist_ok=True)
@@ -24,7 +24,7 @@ def main(testset: str, language_pair: str, seed_no: int, num_samples: int, epsil
 
     with jsonlines.open(out_path, "w") as f:
         for source_sentence in tqdm(dataset.source_sentences):
-            f.write({"samples": model.sample(num_samples * [source_sentence], seed=seed, epsilon_cutoff=epsilon_cutoff), })
+            f.write({"samples": model.sample(num_samples, source_sentence, seed=seed, epsilon_cutoff=epsilon_cutoff), })
 
     return out_path
 
@@ -46,7 +46,7 @@ if __name__ == '__main__':
 
     out_path = main(testset=args.testset, language_pair=args.language_pair, seed_no=args.seed,
         num_samples=args.num_samples, epsilon_cutoff=args.epsilon_cutoff, limit_segments=args.limit_segments,
-        model = args.model, 
+        model_name = args.model, 
         subsample_probabilities_model = args.probabilities_model,
         num_subsamples = args.num_subsamples,
         )
