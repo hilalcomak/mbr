@@ -39,7 +39,6 @@ if __name__ == '__main__':
     parser.add_argument('--limit-segments', type=int, default=None,
                         help='Limit number of segments that are processed (used for testing)')
     parser.add_argument('--model', choices={'facebook/m2m100_418M', 'facebook/m2m100_1.2B'})
-    parser.add_argument('--temperature', type=float, required=True)
     args = parser.parse_args()
 
     out_path = main(testset=args.testset, language_pair=args.language_pair, seed_no=args.seed,
