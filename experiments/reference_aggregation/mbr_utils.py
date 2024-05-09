@@ -155,23 +155,27 @@ class CometUtility:
         return sample_indices.cpu().numpy()
 
     @torch.no_grad()
-    def rank_samples_aggregate(self, source_sequence: str, samples: List[str], references: List[str], s: int) -> np.ndarray:
+    def rank_samples_aggregate(self, source_sequence: str, samples: List[str], references: List[str] | Dict[str, float], s: int) -> np.ndarray:
         """
         Returns the indices of the samples sorted by their utility score, in descending order.
         :param s: The number of aggregate references.
+        :param references: Either a list of referenes or a dictionary where the keys are the references and the values are the weights.
         """
         assert s <= len(references)
         assert not self.scorer.training
-        print(f"Source:{source_sequence}")
-        print(f"Samples:{samples}")
-        print(f"References:{references}")
 
         num_partitions = s
         partition_size = len(references) // num_partitions
 
-        # Add aggregate reference embeddings to the embeddings cache
-        reference_embeddings = torch.stack([self.embeddings[reference] for reference in references])
-        avg_reference_embeddings = reference_embeddings.view(num_partitions, partition_size, -1).mean(dim=1)
+        if isinstance(references, list):
+            # Add aggregate reference embeddings to the embeddings cache
+            reference_embeddings = torch.stack([self.embeddings[reference] for reference in references])
+            avg_reference_embeddings = reference_embeddings.view(num_partitions, partition_size, -1).mean(dim=1)
+        #Weighted reference embedding
+        else:
+            reference_keys =  list(references.keys())
+            reference_embeddings = torch.stack([references[k]*self.embeddings[k] for k in reference_keys])
+            avg_reference_embeddings = reference_embeddings.view(num_partitions, partition_size, -1).sum(dim=1)
         for partition_id in range(num_partitions):
             self.embeddings[f"aggregate_{partition_id}"] = avg_reference_embeddings[partition_id]
 
@@ -211,7 +215,7 @@ class CometUtility:
         return sample_indices.cpu().numpy()
 
 
-def load_utility(utility_name: str):
+def load_utility(utility_name: str, **kwargs):
     if utility_name == "chrf":
         return ChrfUtility()
     elif utility_name.startswith("comet22"):
