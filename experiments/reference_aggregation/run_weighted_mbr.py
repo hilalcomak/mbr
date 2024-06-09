@@ -11,7 +11,7 @@ from experiments.reference_aggregation.mbr_utils import load_utility
 
 
 def loss_to_prob(losses : Dict[str, float], temp:float):
-    res = {k:math.exp(-v/temp) for k,v in losses.items()}
+    res = {k:2**(-v/temp) for k,v in losses.items()}
     s = sum(res.values())
     # Normalize
     res = {k:v/s for k,v in res.items()}
