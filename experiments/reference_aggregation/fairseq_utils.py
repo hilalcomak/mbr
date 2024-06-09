@@ -1,7 +1,7 @@
 import urllib
 from pathlib import Path
 from typing import Union, List
-
+import math
 import torch
 from transformers import M2M100ForConditionalGeneration, M2M100Tokenizer, M2M100PreTrainedModel, TranslationPipeline
 
@@ -68,9 +68,10 @@ class TranslationModel:
         return self.pipeline()
 
 
-def load_model(language_pair: str, model: str) -> TranslationModel:
+def load_model(language_pair: str, model: str, max_length: int) -> TranslationModel:
     model_name = model
     src_lang, tgt_lang = language_pair.split('-')
-    model = M2M100ForConditionalGeneration.from_pretrained(model_name)
+    max_length = math.ceil(max_length/0.9 + 1)
+    model = M2M100ForConditionalGeneration.from_pretrained(model_name, max_length=max_length)
     tokenizer = M2M100Tokenizer.from_pretrained(model_name, src_lang=src_lang, tgt_lang=tgt_lang)
     return TranslationModel(model_name.replace('/', '_'), model, tokenizer, src_lang, tgt_lang)

@@ -3,7 +3,7 @@ from pathlib import Path
 
 import jsonlines
 from tqdm import tqdm
-
+#import collections
 from experiments.reference_aggregation.experiment_utils import SEEDS, Testset
 from experiments.reference_aggregation.fairseq_utils import load_model
 
@@ -14,8 +14,16 @@ def main(testset: str, language_pair: str, seed_no: int, num_samples: int, epsil
 
     seed = SEEDS[seed_no]
     dataset = Testset.from_wmt(testset, language_pair, limit_segments=limit_segments)
+    """ check the sizes
+    print(len(dataset.source_sentences))
+    sizes = collections.defaultdict(int)
+    for s in dataset.source_sentences:
+        sizes[len(s)] += 1
+    print(sizes)
+    exit(1)
+    """
 
-    model = load_model(language_pair, model_name)
+    model = load_model(language_pair, model_name, max_length=max(len(sentence) for sentence in dataset.source_sentences))
 
     samples_dir = out_dir / "samples"
     samples_dir.mkdir(exist_ok=True)
