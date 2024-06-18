@@ -14,8 +14,8 @@ if __name__ == "__main__":
     parser.add_argument('--language-pair', choices=['de-en', 'en-de', 'en-ru', 'ru-en'], required=True)
     parser.add_argument('--testset', choices=['wmt21', 'wmt22'], required=True)
     args = parser.parse_args()
-    model = load_model(args.language_pair, args.model)
     dataset = Testset.from_wmt(args.testset, args.language_pair)
+    model = load_model(args.language_pair, args.model, max_length=max(len(sentence) for sentence in dataset.source_sentences))
     in_path = args.samples_file
     losses = []
     with jsonlines.open(in_path, 'r') as f_in:
