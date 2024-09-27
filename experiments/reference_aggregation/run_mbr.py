@@ -10,9 +10,17 @@ from experiments.reference_aggregation.experiment_utils import Testset
 from experiments.reference_aggregation.mbr_utils import load_utility
 
 
-def main(method: str,testset: str, language_pair: str, samples_path:str, losses_path:str, out_dir: Path = None) -> Path:
+def main(method: str, topk: Optional[int], testset: str, language_pair: str, seed_no: int, fine_utility_name: str,
+         num_samples: int = 1024, epsilon_cutoff: float = 0.02, coarse_utility_name: str = None,
+         limit_segments: int = None, log_time: bool = False, out_dir: Path = None) -> Path:
     if out_dir is None:
         out_dir = Path(__file__).parent
+
+    if coarse_utility_name is None:
+        coarse_utility_name = fine_utility_name
+
+    if method in {'aggregate_to_fine', 'coarse_to_fine'}:
+        assert topk <= num_samples
 
     dataset = Testset.from_wmt(testset, language_pair, limit_segments=limit_segments)
 
@@ -58,6 +66,32 @@ def main(method: str,testset: str, language_pair: str, samples_path:str, losses_
             aggregate_ranking = utility.rank_samples_aggregate(dataset.source_sentences[i], samples[i], references[i],
                                                                s=1)
             translation = samples[i][aggregate_ranking[0]]
+        elif method == 'aggregate_to_fine':
+            aggregate_ranking = coarse_utility.rank_samples_aggregate(dataset.source_sentences[i], samples[i],
+                                                                      references[i], s=1)
+            topk_samples = [samples[i][aggregate_ranking[j]] for j in range(topk)]
+
+            if fine_utility_name != coarse_utility_name and hasattr(utility, "compute_features"):
+                utility.clear_features()
+                input_sequences = {dataset.source_sentences[i]} | set(topk_samples) | set(references[i])
+                utility.compute_features(input_sequences)
+
+            fine_ranking = utility.rank_samples_n_by_s(dataset.source_sentences[i], topk_samples, references[i],
+                                                       s=num_samples)
+            translation = topk_samples[fine_ranking[0]]
+        elif method == 'coarse_to_fine':
+            coarse_ranking = coarse_utility.rank_samples_n_by_s(dataset.source_sentences[i], samples[i], references[i],
+                                                                s=num_samples)
+            topk_samples = [samples[i][coarse_ranking[j]] for j in range(topk)]
+
+            if fine_utility_name != coarse_utility_name and hasattr(utility, "compute_features"):
+                utility.clear_features()
+                input_sequences = {dataset.source_sentences[i]} | set(topk_samples) | set(references[i])
+                utility.compute_features(input_sequences)
+
+            fine_ranking = utility.rank_samples_n_by_s(dataset.source_sentences[i], topk_samples, references[i],
+                                                       s=num_samples)
+            translation = topk_samples[fine_ranking[0]]
         else:
             raise ValueError(f"Unknown method: {method}")
         translations.append(translation)
@@ -79,15 +113,27 @@ def main(method: str,testset: str, language_pair: str, samples_path:str, losses_
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--method', choices=['pairwise', 'aggregate'], required=True)
+    parser.add_argument('--method', choices=['pairwise', 'aggregate', 'aggregate_to_fine', 'coarse_to_fine'],
+                        required=True)
+    parser.add_argument('--topk', type=int, default=20,
+                        help='Number of samples to prune to in aggregate_to_fine method')
     parser.add_argument('--testset', choices=['wmt21', 'wmt22'], required=True)
     parser.add_argument('--language-pair', choices=['de-en', 'en-de', 'en-ru', 'ru-en'], required=True)
     parser.add_argument('--seed', type=int, choices=range(10), required=True,
                         help='Index of the random seed in the list of random seeds')
-    parser.add_argument('--utility', choices=['comet22'], required=True)
-    parser.add_argument('--samples-file', help='File with the samples.', required=True)
-    parser.add_argument('--loss-file', help='File with the loss of each sample.', required=True)
+    parser.add_argument('--utility', choices=['chrf', 'cometinho', 'comet22'], required=True)
+    parser.add_argument('--coarse-utility', choices=['chrf', 'cometinho', 'comet22'], default=None,
+                        help='Utility used for coarse-grained method (default: same as fine-grained)')
+    parser.add_argument('--num-samples', type=int, default=1024)
+    parser.add_argument('--epsilon-cutoff', type=float, default=0.02)
+    parser.add_argument('--limit-segments', type=int, default=None,
+                        help='Limit number of segments that are processed (used for testing)')
+    parser.add_argument('--log-time', action='store_true',
+                        help='Print average wall-clock time per segment (used for benchmarking)')
     args = parser.parse_args()
+
+    if args.coarse_utility is None:
+        args.coarse_utility = args.utility
 
     out_path = main(method=args.method, topk=args.topk, testset=args.testset, language_pair=args.language_pair,
         seed_no=args.seed, fine_utility_name=args.utility, coarse_utility_name=args.coarse_utility,

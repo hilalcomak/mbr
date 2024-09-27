@@ -33,9 +33,14 @@ if __name__ == '__main__':
     losses = None
     if args.losses_file:
         losses = torch.load(args.losses_file)
+        assert args.temp != 0
+    else:
+        assert args.temp == 0
     dataset = Testset.from_wmt(args.testset, args.language_pair)
     with jsonlines.open(args.samples_file, 'r') as f_in:
         hypotheses = [_['samples'] for _ in f_in]
+    if args.temp == 0:
+        losses = [None for _ in hypotheses]
     utility = load_utility(args.utility)
     out_path = f"{args.samples_file}.translations_mbr_{args.utility}.temp{args.temp}.txt"
     with open(out_path, 'w') as f_out:
@@ -45,8 +50,11 @@ if __name__ == '__main__':
             utility.compute_features(set(h) | {src})
             # Remove duplicates and store the weights.
             # Use a dictionary to remove duplicates
-            w_h = {k:v for k,v in zip(h, l)}
-            w_h = loss_to_prob(w_h, args.temp)
-            rank = utility.rank_samples_aggregate(src, h, w_h, s=1)
+            if l is not None:
+                w_h = {k:v for k,v in zip(h, l)}
+                w_h = loss_to_prob(w_h, args.temp)
+                rank = utility.rank_samples_aggregate(src, h, w_h, s=1)
+            else:
+                rank = utility.rank_samples_aggregate(src, h, h, s=1)
             f_out.write(f"{h[rank[0]]}\n")
     print(f"{out_path}")
