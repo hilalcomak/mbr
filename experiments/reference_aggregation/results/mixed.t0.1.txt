@@ -1,0 +1,1 @@
+/home/user/hcomak/git/mbr/experiments/reference_aggregation/samples/samples.wmt21.en-de.n200.epsilon0.02.seed0.modelfacebook_m2m100_418M.segNone.jsonl.translations_mbr_comet22.temp0.1.txt	score: 0.7849
