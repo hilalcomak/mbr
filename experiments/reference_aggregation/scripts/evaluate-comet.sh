@@ -8,7 +8,7 @@ fi
 
 cd translations
 
-declare -a language_pairs=("en-de" "de-en" "en-ru" "ru-en")
+declare -a temperature = ()
 
 for lp in "${language_pairs[@]}"
 do
