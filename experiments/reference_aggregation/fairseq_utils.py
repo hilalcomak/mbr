@@ -47,16 +47,17 @@ class TranslationModel:
         return translations
 
     @torch.no_grad()
+    # consider https://huggingface.co/docs/transformers/en/model_doc/m2m_100#usage-tips-and-examples instead
     def losses(self, source_sentence:str, hypotheses:List[str]):
-        MAX_PARALLEL_LARGE_MODEL = 10
+        #print(f'Source sentence: {source_sentence}')
+        #print(f'Hypotheses size:  {len(hypotheses)}')
+        model_inputs = self.tokenizer([source_sentence], return_tensors="pt").to(self.device)
         losses = []
-        for i in range(1+len(hypotheses)//MAX_PARALLEL_LARGE_MODEL):
-            chunk = hypotheses[i*MAX_PARALLEL_LARGE_MODEL:(i+1)*MAX_PARALLEL_LARGE_MODEL]
-            if len(chunk) == 0:
-                break
-            model_inputs = self.tokenizer(len(chunk) * [source_sentence], return_tensors="pt").to(self.device)
+        for hypothesis in hypotheses:
+            #print(f"Input size:{model_inputs.input_ids.size()}")
             with self.tokenizer.as_target_tokenizer():
-                labels = self.tokenizer(chunk, return_tensors="pt").input_ids.to(self.device)
+                labels = self.tokenizer([hypothesis], return_tensors="pt").input_ids.to(self.device)
+            #print(f"Labels size:{labels.size()}")
             logits = self.model.forward(**model_inputs, labels=labels).logits
             targets = torch.nn.functional.one_hot(labels, logits.shape[2]).float()
             # Move the losses back to the cpu
@@ -72,6 +73,8 @@ def load_model(language_pair: str, model: str, max_length: int) -> TranslationMo
     model_name = model
     src_lang, tgt_lang = language_pair.split('-')
     max_length = math.ceil(max_length/0.9 + 1)
+    print(f'Model loaded with max length: {max_length}')
+
     model = M2M100ForConditionalGeneration.from_pretrained(model_name, max_length=max_length)
     tokenizer = M2M100Tokenizer.from_pretrained(model_name, src_lang=src_lang, tgt_lang=tgt_lang)
     return TranslationModel(model_name.replace('/', '_'), model, tokenizer, src_lang, tgt_lang)

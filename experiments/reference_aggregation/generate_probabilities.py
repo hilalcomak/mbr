@@ -19,7 +19,7 @@ if __name__ == "__main__":
     in_path = args.samples_file
     losses = []
     with jsonlines.open(in_path, 'r') as f_in:
-        for hypotheses, src in tqdm(zip(list(f_in), dataset.source_sentences)):
+        for hypotheses, src in tqdm(zip(list(f_in), dataset.source_sentences), total=len(dataset.source_sentences)):
             losses.append(model.losses(src, hypotheses['samples']))
     # Tensor of shape [#segments, #hypotheses] with the losses of the model.
     losses = torch.stack(losses, dim = 0)
